@@ -5,6 +5,6 @@ authors = ["hibi221b"]
 edition = "2018"
 
 [dependencies]
-iced = { git = "https://github.com/hecrj/iced", rev = "23647d2f50f0e177b93cf09c72886a90702df982", features = ["canvas", "tokio"] }
+iced = { git = "https://github.com/hecrj/iced", rev = "23647d2f50f0e177b93cf09c72886a90702df982", features = ["canvas"] }
 plotters = "0.3.0"
 plotters-backend = "0.3.0"
