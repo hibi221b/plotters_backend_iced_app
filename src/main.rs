@@ -19,7 +19,7 @@ fn main() -> iced::Result {
     PlotterExample::run(settings)
 }
 
-#[derive(Debug)]
+
 struct PlotterExample {
     cache: Cache
 }
@@ -86,10 +86,10 @@ impl Plottable for PlotterExample {
         root_drawing_area.fill(&WHITE).unwrap();
 
         let mut chart = ChartBuilder::on(&root_drawing_area)
-            .caption("y=x^2", ("sans-serif", 32).into_font())
-            .margin(24)
-            .x_label_area_size(30)
-            .y_label_area_size(30)
+            .caption("y=x^2", ("sans-serif", 24).into_font())
+            .margin(16)
+            .x_label_area_size(24)
+            .y_label_area_size(24)
             .build_cartesian_2d(-1f32..1f32, -0.1f32..1f32)
             .unwrap();
 

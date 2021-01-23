@@ -1,7 +1,4 @@
-use iced::{
-    Color, Point, Size, 
-    canvas::{self, Path, Stroke, LineCap, LineJoin}
-};
+use iced::{Color, HorizontalAlignment, Point, Size, VerticalAlignment, canvas::{self, Path, Stroke}};
 
 use plotters_backend::{
     DrawingBackend, DrawingErrorKind, BackendColor, BackendCoord, BackendStyle, BackendTextStyle
@@ -9,6 +6,22 @@ use plotters_backend::{
 
 use std::error::Error;
 use std::result::Result;
+
+pub trait Plottable {
+    fn draw_plot<'a>(&self, backend: CustomPlotFrame<'a>);
+}
+
+pub struct CustomPlotFrame<'a> {
+    pub frame: &'a mut canvas::Frame
+}
+
+impl<'a> CustomPlotFrame<'a> {
+    pub fn new(frame: &'a mut canvas::Frame) -> Self {
+        Self {
+            frame
+        }
+    }
+}
 
 #[derive(Debug)]
 pub enum PlotErr {}
@@ -21,20 +34,18 @@ impl std::fmt::Display for PlotErr {
 
 impl Error for PlotErr {}
 
-pub trait Plottable: std::fmt::Debug {
-    fn draw_plot<'a>(&self, backend: CustomPlotFrame<'a>);
-}
-
-#[derive(Debug)]
-pub struct CustomPlotFrame<'a> {
-    pub frame: &'a mut canvas::Frame
-}
-
 impl<'a> CustomPlotFrame<'a> {
-    pub fn new(frame: &'a mut canvas::Frame) -> Self {
-        Self {
-            frame
-        }
+    fn gen_bg_color(bg_color: &BackendColor) -> Color {
+        Color::from_rgba8(
+            bg_color.rgb.0,
+            bg_color.rgb.1,
+            bg_color.rgb.2,
+            bg_color.alpha as f32
+        )
+    }
+
+    fn gen_bg_point(bg_point: &BackendCoord) -> Point {
+        Point::new(bg_point.0 as f32, bg_point.1 as f32)
     }
 }
 
@@ -58,15 +69,12 @@ impl<'a> DrawingBackend for CustomPlotFrame<'a> {
         point: BackendCoord, 
         color: BackendColor
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> { 
+        let color = Self::gen_bg_color(&color);
+        let point = Self::gen_bg_point(&point);
+        let size = Size::new(1.0, 1.0);
+        let path = Path::rectangle(point, size);
 
-        let path = Path::rectangle(
-            Point::new(point.0 as f32, point.1 as f32),
-            Size::new(1.0, 1.0)
-        );
-
-        let (r, g, b) = (color.rgb.0, color.rgb.1, color.rgb.2);
-
-        self.frame.fill(&path, Color::from_rgb8(r, g, b));
+        self.frame.fill(&path, color);
         Ok(())
     }
 
@@ -76,18 +84,16 @@ impl<'a> DrawingBackend for CustomPlotFrame<'a> {
         to: BackendCoord,
         style: &S,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        
+        let color = Self::gen_bg_color(&style.color());
         let path = Path::line(
-            Point::new(from.0 as f32, from.1 as f32),
-            Point::new(to.0 as f32, to.1 as f32)
+        Self::gen_bg_point(&from),
+            Self::gen_bg_point(&to),
         );
 
-        let (r, g, b) = (style.color().rgb.0, style.color().rgb.1, style.color().rgb.2);
         let stroke = Stroke {
-            color: Color::from_rgb8(r, g, b),
+            color,
             width: style.stroke_width() as f32,
-            line_cap: LineCap::Butt,
-            line_join: LineJoin::Miter
+            ..Default::default()
         };
 
         self.frame.stroke(&path, stroke);
@@ -101,17 +107,13 @@ impl<'a> DrawingBackend for CustomPlotFrame<'a> {
         style: &S,
         fill: bool,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-
-        let path = Path::rectangle(
-            Point::new(bottom_right.0 as f32, bottom_right.1 as f32),
-            Size::new(
-                (upper_left.0 - bottom_right.0) as f32,
-                (upper_left.1 - bottom_right.1) as f32
-            )
+        let color = Self::gen_bg_color(&style.color());
+        let size = Size::new(
+            (bottom_right.0 - upper_left.0) as f32,
+            (bottom_right.1 - upper_left.1) as f32
         );
-        
-        let (r, g, b) = (style.color().rgb.0, style.color().rgb.1, style.color().rgb.2);
-        let color = Color::from_rgb8(r, g, b);
+
+        let path = Path::rectangle(Self::gen_bg_point(&upper_left), size);
 
         if fill {
             self.frame.fill(&path, color);
@@ -119,8 +121,7 @@ impl<'a> DrawingBackend for CustomPlotFrame<'a> {
             let stroke = Stroke {
                 color,
                 width: style.stroke_width() as f32,
-                line_cap: LineCap::Butt,
-                line_join: LineJoin::Miter
+                ..Default::default()
             };
 
             self.frame.stroke(&path, stroke);
@@ -136,14 +137,11 @@ impl<'a> DrawingBackend for CustomPlotFrame<'a> {
         style: &S,
         fill: bool
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-
+        let color = Self::gen_bg_color(&style.color());
         let path = Path::circle(
-            Point::new(center.0 as f32, center.1 as f32),
+            Self::gen_bg_point(&center),
             radius as f32
         );
-
-        let (r, g, b) = (style.color().rgb.0, style.color().rgb.1, style.color().rgb.2);
-        let color = Color::from_rgb8(r, g, b);
 
         if fill {
             self.frame.fill(&path, color);
@@ -151,8 +149,7 @@ impl<'a> DrawingBackend for CustomPlotFrame<'a> {
             let stroke = Stroke {
                 color,
                 width: style.stroke_width() as f32,
-                line_cap: LineCap::Butt,
-                line_join: LineJoin::Miter
+                ..Default::default()
             };
 
             self.frame.stroke(&path, stroke);
@@ -167,21 +164,20 @@ impl<'a> DrawingBackend for CustomPlotFrame<'a> {
         style: &TStyle,
         pos: BackendCoord,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-
-        let (r, g, b) = (style.color().rgb.0, style.color().rgb.1, style.color().rgb.2);
+        let color = Self::gen_bg_color(&style.color());
 
         self.frame.fill_text(
             iced::canvas::Text {
                 content: text.to_string(),
                 size: style.size() as f32,
-                position: Point::new(
-                    pos.0 as f32 - 10.0,
-                    pos.1 as f32 -4.0,
-                ),
-                color: Color::from_rgb8(r, g, b),
+                position: Self::gen_bg_point(&pos),
+                color,
+                horizontal_alignment: HorizontalAlignment::Center,
+                vertical_alignment: VerticalAlignment::Center,
                 ..iced::canvas::Text::default()
             }
         );
+
         Ok(())
     }
 }
