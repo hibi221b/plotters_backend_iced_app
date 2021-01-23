@@ -7,9 +7,9 @@ use plotters::{
 };
 
 use iced::{
-    canvas::{self, Cache, Canvas, Cursor, Geometry},
-    executor, Application, Command, Container, Element, Length,
-    Rectangle, Settings, Subscription
+    Application, Command, Container, Element, 
+    Length, Rectangle, Settings, Subscription,
+    canvas::{self, Cache, Canvas, Cursor, Geometry}, executor
 };
 
 fn main() -> iced::Result {
@@ -19,9 +19,13 @@ fn main() -> iced::Result {
     PlotterExample::run(settings)
 }
 
+#[derive(Default)]
+struct Graph {
+    cache: Cache
+}
 
 struct PlotterExample {
-    cache: Cache
+    graph: Graph
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -36,7 +40,7 @@ impl Application for PlotterExample {
     fn new(_flags: ()) -> (Self, Command<Message>) {
         (
             PlotterExample {
-                cache: Default::default()
+                graph: Graph::default()
             },
             Command::none(),
         )
@@ -47,6 +51,7 @@ impl Application for PlotterExample {
     }
 
     fn update(&mut self, _message: Message) -> Command<Message> {
+
         Command::none()
     }
 
@@ -55,7 +60,7 @@ impl Application for PlotterExample {
     }
 
     fn view(&mut self) -> Element<Message> {
-        let plot = Canvas::new(self)
+        let plot = Canvas::new(&mut self.graph)
             .width(Length::Fill)
             .height(Length::Fill);
 
@@ -68,7 +73,7 @@ impl Application for PlotterExample {
     }
 }
 
-impl<Message> canvas::Program<Message> for PlotterExample {
+impl<Message> canvas::Program<Message> for Graph {
     fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
         let plotter_geometory = self.cache.draw(bounds.size(), |frame| {
             self.draw_plot(CustomPlotFrame::new(frame))
@@ -80,7 +85,7 @@ impl<Message> canvas::Program<Message> for PlotterExample {
     }
 }
 
-impl Plottable for PlotterExample {
+impl Plottable for Graph {
     fn draw_plot(&self, frame: CustomPlotFrame) { 
         let root_drawing_area = frame.into_drawing_area();
         root_drawing_area.fill(&WHITE).unwrap();
